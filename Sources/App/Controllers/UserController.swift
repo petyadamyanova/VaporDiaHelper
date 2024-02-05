@@ -19,6 +19,10 @@ struct UserController: RouteCollection {
         
         let mealController = MealController()
         try routes.register(collection: mealController)
+        
+        let glucometerBloodSugarTestController = GlucometerBloodSugarTestController()
+        try routes.register(collection: glucometerBloodSugarTestController)
+        
     }
     
     // Get request /users route

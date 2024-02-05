@@ -45,6 +45,9 @@ final class User: Model, Content {
     @Children(for: \.$user)
         var meals: [Meal]
     
+    @Children(for: \.$user)
+        var glucometerBloodSugarTests: [GlucometerBloodSugarTest]
+    
     init() { }
 
     init(id: UUID? = nil, username: String, email: String, nightscout: String, password_hash: String, birtDate: String, yearOfDiagnosis: String, pumpModel: String, sensorModel: String, insulinType: String) {
@@ -114,5 +117,10 @@ extension User {
     func addMeal(timestamp: Date, bloodSugar: Double, insulinDose: Double, carbsIntake: Double, foodType: String, on database: Database) -> EventLoopFuture<Void> {
         let meal = Meal(timestamp: timestamp, bloodSugar: bloodSugar, insulinDose: insulinDose, carbsIntake: carbsIntake, foodType: foodType, userID: self.id!)
         return meal.create(on: database)
+    }
+    
+    func addGlucometerBloodSugarTest(timestamp: Date, bloodSugar: Double, userID: UUID, on database: Database) -> EventLoopFuture<Void> {
+        let glucometerBloodSugarTest = GlucometerBloodSugarTest(timestamp: timestamp, bloodSugar: bloodSugar, userID: userID)
+        return glucometerBloodSugarTest.create(on: database)
     }
 }
