@@ -89,7 +89,6 @@ extension User {
         var id: UUID?
         var username: String
         var email: String
-        var password_hash: String
         var nightscout: String
         var birtDate: String
         var yearOfDiagnosis: String
@@ -104,7 +103,6 @@ extension User {
             id: id,
             username: username,
             email: email,
-            password_hash: password_hash,
             nightscout: nightscout,
             birtDate: birtDate,
             yearOfDiagnosis: yearOfDiagnosis,

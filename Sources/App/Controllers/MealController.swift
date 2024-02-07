@@ -14,6 +14,7 @@ struct MealController: RouteCollection {
         let meals = routes.grouped("users", ":userId", "meals")
         meals.post(use: createMeal)
         meals.get(use: getAllMeals)
+        meals.delete(":mealId", use: deleteMeal)
     }
     
     func createMeal(req: Request) throws -> EventLoopFuture<HTTPStatus> {
@@ -47,4 +48,26 @@ struct MealController: RouteCollection {
                     .all()
             }
     }
+    
+    func deleteMeal(req: Request) throws -> EventLoopFuture<HTTPStatus> {
+           let userIdParam = try req.parameters.require("userId", as: UUID.self)
+           let mealIdParam = try req.parameters.require("mealId", as: UUID.self)
+
+           // Check if the user exists
+           return User.find(userIdParam, on: req.db)
+               .unwrap(or: Abort(.notFound, reason: "User not found"))
+               .flatMap { user in
+                   // Find the meal associated with the user and mealId
+                   return Meal.query(on: req.db)
+                       .filter(\.$id == mealIdParam)
+                       .filter(\.$user.$id == user.id!)
+                       .first()
+                       .unwrap(or: Abort(.notFound, reason: "Meal not found"))
+                       .flatMap { meal in
+                           // Delete the meal
+                           return meal.delete(on: req.db)
+                               .transform(to: .noContent)
+                       }
+               }
+       }
 }
