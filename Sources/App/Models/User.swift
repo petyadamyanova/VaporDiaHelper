@@ -121,4 +121,9 @@ extension User {
         let glucometerBloodSugarTest = GlucometerBloodSugarTest(timestamp: timestamp, bloodSugar: bloodSugar, userID: userID)
         return glucometerBloodSugarTest.create(on: database)
     }
+    
+    func updateUsername(to newUsername: String, on database: Database) -> EventLoopFuture<Void> {
+        self.username = newUsername
+        return self.save(on: database)
+    }
 }

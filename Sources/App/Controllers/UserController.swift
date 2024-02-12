@@ -16,6 +16,7 @@ struct UserController: RouteCollection {
         users.get(use: index)
         users.post(use: create)
         users.post("login", use: login)
+        users.put(":userId", "update-username", use: updateUsername)
         
         let mealController = MealController()
         try routes.register(collection: mealController)
@@ -33,15 +34,15 @@ struct UserController: RouteCollection {
     func create(req: Request) throws -> EventLoopFuture<HTTPStatus> {
         do {
             let create = try req.content.decode(User.Create.self)
-
+            
             // Ensure that passwords match
             guard create.password == create.confirmPassword else {
                 throw Abort(.badRequest, reason: "Passwords did not match")
             }
-
+            
             // Hash the password using BCrypt
             let hashedPassword = try Bcrypt.hash(create.password)
-
+            
             // Check if a user with the same email already exists
             return User.query(on: req.db)
                 .filter(\.$email == create.email)
@@ -64,7 +65,7 @@ struct UserController: RouteCollection {
                             sensorModel: create.sensorModel,
                             insulinType: create.insulinType
                         )
-
+                        
                         // Save the user asynchronously
                         return user.save(on: req.db)
                             .map { _ in
@@ -76,15 +77,15 @@ struct UserController: RouteCollection {
             return req.eventLoop.makeFailedFuture(error)
         }
     }
-
+    
     func login(req: Request) async throws -> User.Public {
         do {
             let login = try req.content.decode(User.Login.self)
-
+            
             guard let user = try await User.query(on: req.db)
                 .filter(\.$email == login.email)
                 .first() else {
-                    throw Abort(.unauthorized, reason: "User not found")
+                throw Abort(.unauthorized, reason: "User not found")
             }
             
             do {
@@ -103,6 +104,31 @@ struct UserController: RouteCollection {
             throw Abort(.badRequest, reason: "Invalid request body")
         }
     }
+    
+    func updateUsername(req: Request) throws -> EventLoopFuture<User> {
+        do {
+            let userIdParam = try req.parameters.require("userId", as: UUID.self)
+            let updateRequest = try req.content.decode(UpdateUsernameRequest.self)
+            
+            print("UserId: \(userIdParam), NewUsername: \(updateRequest.newUsername)")
+            
+            return User.find(userIdParam, on: req.db)
+                .unwrap(or: Abort(.notFound, reason: "User not found"))
+                .flatMap { user in
+                    return user.updateUsername(to: updateRequest.newUsername, on: req.db)
+                        .map {
+                            print("Username updated successfully")
+                            return user
+                        }
+                }
+        } catch {
+            print("Error updating username: \(error)")
+            throw error
+        }
+    }
+    
+}
 
-
+struct UpdateUsernameRequest: Content {
+    var newUsername: String
 }

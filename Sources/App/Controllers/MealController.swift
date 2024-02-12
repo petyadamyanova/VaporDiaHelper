@@ -18,9 +18,7 @@ struct MealController: RouteCollection {
     }
     
     func createMeal(req: Request) throws -> EventLoopFuture<HTTPStatus> {
-        
         let userIdParam = try req.parameters.require("userId", as: UUID.self)
-        
         let mealData: Meal.Create = try req.content.decode(Meal.Create.self)
         
         // Check if the user exists

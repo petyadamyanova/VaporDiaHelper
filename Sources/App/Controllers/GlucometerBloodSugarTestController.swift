@@ -14,6 +14,7 @@ struct GlucometerBloodSugarTestController: RouteCollection {
         let tests = routes.grouped("users", ":userId", "glucometer-tests")
         tests.post(use: createTest)
         tests.get(use: getAllTests)
+        tests.delete(":testId", use: deleteTest)
     }
     
     func createTest(req: Request) throws -> EventLoopFuture<HTTPStatus> {
@@ -39,6 +40,25 @@ struct GlucometerBloodSugarTestController: RouteCollection {
                 return GlucometerBloodSugarTest.query(on: req.db)
                     .filter(\.$user.$id == user.id!)
                     .all()
+            }
+    }
+    
+    func deleteTest(req: Request) throws -> EventLoopFuture<HTTPStatus> {
+        let userIdParam = try req.parameters.require("userId", as: UUID.self)
+        let testIdParam = try req.parameters.require("testId", as: UUID.self)
+
+        return User.find(userIdParam, on: req.db)
+            .unwrap(or: Abort(.notFound, reason: "User not found"))
+            .flatMap { user in
+                return GlucometerBloodSugarTest.query(on: req.db)
+                    .filter(\.$id == testIdParam)
+                    .filter(\.$user.$id == user.id!)
+                    .first()
+                    .unwrap(or: Abort(.notFound, reason: "Glucometer test not found"))
+                    .flatMap { test in
+                        return test.delete(on: req.db)
+                            .transform(to: .noContent)
+                    }
             }
     }
 }
