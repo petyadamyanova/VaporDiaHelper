@@ -131,6 +131,9 @@ extension User {
         self.email = newEmail
         return self.save(on: database)
     }
-
     
+    func updateNightscout(to newNightscout: String, on database: Database) -> EventLoopFuture<Void> {
+        self.nightscout = newNightscout
+        return self.save(on: database)
+    }
 }

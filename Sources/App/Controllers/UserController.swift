@@ -18,6 +18,7 @@ struct UserController: RouteCollection {
         users.post("login", use: login)
         users.put(":userId", "update-username", use: updateUsername)
         users.put(":userId", "update-email", use: updateEmail)
+        users.put(":userId", "update-nightscout", use: updateNightscout)
         
         let mealController = MealController()
         try routes.register(collection: mealController)
@@ -148,6 +149,26 @@ struct UserController: RouteCollection {
         }
     }
     
+    func updateNightscout(req: Request) throws -> EventLoopFuture<User> {
+        do {
+            let userIdParam = try req.parameters.require("userId", as: UUID.self)
+            let updateRequest = try req.content.decode(UpdateNightscoutRequest.self)
+
+            return User.find(userIdParam, on: req.db)
+                .unwrap(or: Abort(.notFound, reason: "User not found"))
+                .flatMap { user in
+                    return user.updateNightscout(to: updateRequest.newNightscout, on: req.db)
+                        .map {
+                            print("Nightscout updated successfully")
+                            return user
+                        }
+                }
+        } catch {
+            print("Error updating nightscout: \(error)")
+            throw error
+        }
+    }
+    
 }
 
 struct UpdateUsernameRequest: Content {
@@ -156,4 +177,8 @@ struct UpdateUsernameRequest: Content {
 
 struct UpdateEmailRequest: Content {
     var newEmail: String
+}
+
+struct UpdateNightscoutRequest: Content {
+    var newNightscout: String
 }
