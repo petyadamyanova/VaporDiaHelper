@@ -126,4 +126,11 @@ extension User {
         self.username = newUsername
         return self.save(on: database)
     }
+    
+    func updateEmail(to newEmail: String, on database: Database) -> EventLoopFuture<Void> {
+        self.email = newEmail
+        return self.save(on: database)
+    }
+
+    
 }
