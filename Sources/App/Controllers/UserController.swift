@@ -26,6 +26,9 @@ struct UserController: RouteCollection {
         let glucometerBloodSugarTestController = GlucometerBloodSugarTestController()
         try routes.register(collection: glucometerBloodSugarTestController)
         
+        let startTimesController = StartTimesController()
+        try routes.register(collection: startTimesController)
+        
     }
     
     // Get request /users route
