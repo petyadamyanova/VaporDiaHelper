@@ -25,16 +25,33 @@ struct StartTimesController: RouteCollection {
         return User.find(userIdParam, on: req.db)
             .unwrap(or: Abort(.notFound, reason: "User not found"))
             .flatMap { user in
-                // Create a start time associated with the user
-                let startTime = StartTimes(
-                    sensorStartDateTime: startTimeData.sensorStartDateTime,
-                    pumpStartDateTime: startTimeData.pumpStartDateTime,
-                    insulinCanulaStartDateTime: startTimeData.insulinCanulaStartDateTime,
-                    glucometerCanulaStartDateTime: startTimeData.glucometerCanulaStartDateTime,
-                    userId: user.id!
-                )
-                return startTime.save(on: req.db)
-                    .transform(to: .created)
+                // Check if a start time already exists for the user
+                return StartTimes.query(on: req.db)
+                    .filter(\.$user.$id == user.id!)
+                    .first()
+                    .flatMap { existingStartTime in
+                        if let existingStartTime = existingStartTime {
+                            // Update existing start time
+                            existingStartTime.sensorStartDateTime = startTimeData.sensorStartDateTime
+                            existingStartTime.pumpStartDateTime = startTimeData.pumpStartDateTime
+                            existingStartTime.insulinCanulaStartDateTime = startTimeData.insulinCanulaStartDateTime
+                            existingStartTime.glucometerCanulaStartDateTime = startTimeData.glucometerCanulaStartDateTime
+                            
+                            return existingStartTime.save(on: req.db)
+                                .transform(to: .ok)
+                        } else {
+                            // Create a new start time associated with the user
+                            let startTime = StartTimes(
+                                sensorStartDateTime: startTimeData.sensorStartDateTime,
+                                pumpStartDateTime: startTimeData.pumpStartDateTime,
+                                insulinCanulaStartDateTime: startTimeData.insulinCanulaStartDateTime,
+                                glucometerCanulaStartDateTime: startTimeData.glucometerCanulaStartDateTime,
+                                userId: user.id!
+                            )
+                            return startTime.save(on: req.db)
+                                .transform(to: .created)
+                        }
+                    }
             }
     }
     
