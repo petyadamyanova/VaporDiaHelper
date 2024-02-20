@@ -136,4 +136,9 @@ extension User {
         self.nightscout = newNightscout
         return self.save(on: database)
     }
+    
+    func updateBirthDate(to newBirthDate: String, on database: Database) -> EventLoopFuture<Void> {
+       self.birtDate = newBirthDate
+       return self.save(on: database)
+    }
 }
