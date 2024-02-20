@@ -20,6 +20,10 @@ struct UserController: RouteCollection {
         users.put(":userId", "update-email", use: updateEmail)
         users.put(":userId", "update-nightscout", use: updateNightscout)
         users.put(":userId", "update-birthdate", use: updateBirthDate)
+        users.put(":userId", "update-year-of-diagnosis", use: updateYearOfDiagnosis)
+        users.put(":userId", "update-pump-model", use: updatePumpModel)
+        users.put(":userId", "update-sensor-model", use: updateSensorModel)
+        users.put(":userId", "update-insulin-type", use: updateInsulinType)
         
         let mealController = MealController()
         try routes.register(collection: mealController)
@@ -193,9 +197,88 @@ struct UserController: RouteCollection {
         }
     }
     
-}
+    func updateYearOfDiagnosis(req: Request) throws -> EventLoopFuture<User> {
+        do {
+            let userIdParam = try req.parameters.require("userId", as: UUID.self)
+            let updateRequest = try req.content.decode(UpdateYearOfDiagnosisRequest.self)
 
-//
+            return User.find(userIdParam, on: req.db)
+                .unwrap(or: Abort(.notFound, reason: "User not found"))
+                .flatMap { user in
+                    return user.updateYearOfDiagnosis(to: updateRequest.newYearOfDiagnosis, on: req.db)
+                        .map {
+                            print("Year of Diagnosis updated successfully")
+                            return user
+                        }
+                }
+        } catch {
+            print("Error updating year of diagnosis: \(error)")
+            throw error
+        }
+    }
+
+    func updatePumpModel(req: Request) throws -> EventLoopFuture<User> {
+        do {
+            let userIdParam = try req.parameters.require("userId", as: UUID.self)
+            let updateRequest = try req.content.decode(UpdatePumpModelRequest.self)
+
+            return User.find(userIdParam, on: req.db)
+                .unwrap(or: Abort(.notFound, reason: "User not found"))
+                .flatMap { user in
+                    return user.updatePumpModel(to: updateRequest.newPumpModel, on: req.db)
+                        .map {
+                            print("Pump Model updated successfully")
+                            return user
+                        }
+                }
+        } catch {
+            print("Error updating pump model: \(error)")
+            throw error
+        }
+    }
+
+    func updateSensorModel(req: Request) throws -> EventLoopFuture<User> {
+        do {
+            let userIdParam = try req.parameters.require("userId", as: UUID.self)
+            let updateRequest = try req.content.decode(UpdateSensorModelRequest.self)
+
+            return User.find(userIdParam, on: req.db)
+                .unwrap(or: Abort(.notFound, reason: "User not found"))
+                .flatMap { user in
+                    return user.updateSensorModel(to: updateRequest.newSensorModel, on: req.db)
+                        .map {
+                            print("Sensor Model updated successfully")
+                            return user
+                        }
+                }
+        } catch {
+            print("Error updating sensor model: \(error)")
+            throw error
+        }
+    }
+
+    func updateInsulinType(req: Request) throws -> EventLoopFuture<User> {
+        do {
+            let userIdParam = try req.parameters.require("userId", as: UUID.self)
+            let updateRequest = try req.content.decode(UpdateInsulinTypeRequest.self)
+
+            return User.find(userIdParam, on: req.db)
+                .unwrap(or: Abort(.notFound, reason: "User not found"))
+                .flatMap { user in
+                    return user.updateInsulinType(to: updateRequest.newInsulinType, on: req.db)
+                        .map {
+                            print("Insulin Type updated successfully")
+                            return user
+                        }
+                }
+        } catch {
+            print("Error updating insulin type: \(error)")
+            throw error
+        }
+    }
+
+    
+}
 
 struct UpdateUsernameRequest: Content {
     var newUsername: String
@@ -211,4 +294,20 @@ struct UpdateNightscoutRequest: Content {
 
 struct UpdateBirthDateRequest: Content {
     var newBirthDate: String
+}
+
+struct UpdateYearOfDiagnosisRequest: Content {
+    var newYearOfDiagnosis: String
+}
+
+struct UpdatePumpModelRequest: Content {
+    var newPumpModel: String
+}
+
+struct UpdateSensorModelRequest: Content {
+    var newSensorModel: String
+}
+
+struct UpdateInsulinTypeRequest: Content {
+    var newInsulinType: String
 }

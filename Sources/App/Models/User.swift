@@ -141,4 +141,24 @@ extension User {
        self.birtDate = newBirthDate
        return self.save(on: database)
     }
+    
+    func updateYearOfDiagnosis(to newYearOfDiagnosis: String, on database: Database) -> EventLoopFuture<Void> {
+        self.yearOfDiagnosis = newYearOfDiagnosis
+        return self.save(on: database)
+    }
+
+    func updatePumpModel(to newPumpModel: String, on database: Database) -> EventLoopFuture<Void> {
+        self.pumpModel = newPumpModel
+        return self.save(on: database)
+    }
+
+    func updateSensorModel(to newSensorModel: String, on database: Database) -> EventLoopFuture<Void> {
+        self.sensorModel = newSensorModel
+        return self.save(on: database)
+    }
+
+    func updateInsulinType(to newInsulinType: String, on database: Database) -> EventLoopFuture<Void> {
+        self.insulinType = newInsulinType
+        return self.save(on: database)
+    }
 }
