@@ -95,24 +95,26 @@ struct UserController: RouteCollection {
             guard let user = try await User.query(on: req.db)
                 .filter(\.$email == login.email)
                 .first() else {
-                throw Abort(.unauthorized, reason: "User not found")
+                throw LoginError.userNotFound
             }
             
             do {
                 if try Bcrypt.verify(login.password, created: user.password_hash) {
                     return user.toPublic()
                 } else {
-                    throw Abort(.unauthorized, reason: "Invalid password")
+                    throw LoginError.invalidPassword
                 }
             } catch {
                 throw Abort(.internalServerError, reason: "Error verifying password")
             }
-        } catch let decodingError as DecodingError {
-            print("Decoding error: \(decodingError)")
-            throw Abort(.badRequest, reason: "Error decoding request body")
+        } catch LoginError.invalidPassword {
+            throw LoginError.invalidPassword
+        } catch LoginError.userNotFound {
+            throw LoginError.userNotFound
         } catch {
             throw Abort(.badRequest, reason: "Invalid request body")
         }
+
     }
     
     func updateUsername(req: Request) throws -> EventLoopFuture<User> {
@@ -311,3 +313,9 @@ struct UpdateSensorModelRequest: Content {
 struct UpdateInsulinTypeRequest: Content {
     var newInsulinType: String
 }
+
+enum LoginError: Error {
+    case userNotFound
+    case invalidPassword
+}
+
