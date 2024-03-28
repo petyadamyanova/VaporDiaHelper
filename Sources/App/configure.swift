@@ -14,6 +14,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateMeals())
     app.migrations.add(CreateGlucometerBloodSugarTests())
     app.migrations.add(CreateStartTimes())
+    app.migrations.add(CreateAppointments())
     try await app.autoMigrate()
 
     // register routes

@@ -34,6 +34,9 @@ struct UserController: RouteCollection {
         let startTimesController = StartTimesController()
         try routes.register(collection: startTimesController)
         
+        let appointmentController = AppointmentController()
+        try routes.register(collection: appointmentController)
+        
     }
     
     // Get request /users route
