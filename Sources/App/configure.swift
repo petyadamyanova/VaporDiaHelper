@@ -2,6 +2,7 @@ import NIOSSL
 import Fluent
 import FluentSQLiteDriver
 import Vapor
+import JWT
 
 // configures your application
 public func configure(_ app: Application) async throws {
@@ -16,6 +17,8 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateStartTimes())
     app.migrations.add(CreateAppointments())
     try await app.autoMigrate()
+    
+    app.jwt.signers.use(.hs256(key: "secret"))
 
     // register routes
     try routes(app)

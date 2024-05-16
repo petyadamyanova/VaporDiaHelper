@@ -11,7 +11,13 @@ import Fluent
 
 struct MealController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
-        let meals = routes.grouped("users", ":userId", "meals")
+        let users = routes.grouped("users")
+
+        let protected = users.grouped(JWTAuthenticationMiddleware())
+            
+            
+        let meals = protected.grouped(":userId", "meals")
+        
         meals.post(use: createMeal)
         meals.get(use: getAllMeals)
         meals.delete(":mealId", use: deleteMeal)
@@ -20,6 +26,16 @@ struct MealController: RouteCollection {
     func createMeal(req: Request) throws -> EventLoopFuture<HTTPStatus> {
         let userIdParam = try req.parameters.require("userId", as: UUID.self)
         let mealData: Meal.Create = try req.content.decode(Meal.Create.self)
+        
+        do {
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
+        } catch {
+            throw Abort(.unauthorized, reason: "Invalid or missing authentication token")
+        }
         
         // Check if the user exists
         return User.find(userIdParam, on: req.db)
@@ -35,6 +51,16 @@ struct MealController: RouteCollection {
     
     func getAllMeals(req: Request) throws -> EventLoopFuture<[Meal]> {
         let userIdParam = try req.parameters.require("userId", as: UUID.self)
+        
+        do {
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
+        } catch {
+            throw Abort(.unauthorized, reason: "Invalid or missing authentication token")
+        }
 
         // Check if the user exists
         return User.find(userIdParam, on: req.db)
@@ -48,8 +74,18 @@ struct MealController: RouteCollection {
     }
     
     func deleteMeal(req: Request) throws -> EventLoopFuture<HTTPStatus> {
-           let userIdParam = try req.parameters.require("userId", as: UUID.self)
-           let mealIdParam = try req.parameters.require("mealId", as: UUID.self)
+        let userIdParam = try req.parameters.require("userId", as: UUID.self)
+        let mealIdParam = try req.parameters.require("mealId", as: UUID.self)
+
+        do {
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
+        } catch {
+            throw Abort(.unauthorized, reason: "Invalid or missing authentication token")
+        }
 
            // Check if the user exists
            return User.find(userIdParam, on: req.db)
@@ -67,5 +103,5 @@ struct MealController: RouteCollection {
                                .transform(to: .noContent)
                        }
                }
-       }
+        }
 }

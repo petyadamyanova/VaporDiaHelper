@@ -9,6 +9,7 @@ import Foundation
 import Fluent
 import Vapor
 import BCrypt
+import JWTKit
 
 struct UserController: RouteCollection {
     func boot(routes: Vapor.RoutesBuilder) throws {
@@ -16,14 +17,17 @@ struct UserController: RouteCollection {
         users.get(use: index)
         users.post(use: create)
         users.post("login", use: login)
-        users.put(":userId", "update-username", use: updateUsername)
-        users.put(":userId", "update-email", use: updateEmail)
-        users.put(":userId", "update-nightscout", use: updateNightscout)
-        users.put(":userId", "update-birthdate", use: updateBirthDate)
-        users.put(":userId", "update-year-of-diagnosis", use: updateYearOfDiagnosis)
-        users.put(":userId", "update-pump-model", use: updatePumpModel)
-        users.put(":userId", "update-sensor-model", use: updateSensorModel)
-        users.put(":userId", "update-insulin-type", use: updateInsulinType)
+        
+        let protectedRoutes = users.grouped(JWTAuthenticationMiddleware())
+
+        protectedRoutes.put(":userId", "update-username", use: updateUsername)
+        protectedRoutes.put(":userId", "update-email", use: updateEmail)
+        protectedRoutes.put(":userId", "update-nightscout", use: updateNightscout)
+        protectedRoutes.put(":userId", "update-birthdate", use: updateBirthDate)
+        protectedRoutes.put(":userId", "update-year-of-diagnosis", use: updateYearOfDiagnosis)
+        protectedRoutes.put(":userId", "update-pump-model", use: updatePumpModel)
+        protectedRoutes.put(":userId", "update-sensor-model", use: updateSensorModel)
+        protectedRoutes.put(":userId", "update-insulin-type", use: updateInsulinType)
         
         let mealController = MealController()
         try routes.register(collection: mealController)
@@ -91,7 +95,7 @@ struct UserController: RouteCollection {
         }
     }
     
-    func login(req: Request) async throws -> User.Public {
+    func login(req: Request) async throws -> UserLoginResponse {
         do {
             let login = try req.content.decode(User.Login.self)
             
@@ -103,7 +107,18 @@ struct UserController: RouteCollection {
             
             do {
                 if try Bcrypt.verify(login.password, created: user.password_hash) {
-                    return user.toPublic()
+                    //return user.toPublic()
+                    let expirationInterval: TimeInterval = 14 * 24 * 60 * 60 // 14 days in seconds
+                    let expirationDate = Date().addingTimeInterval(expirationInterval)
+                    
+                    let payload = TestPayload(
+                        subject: SubjectClaim(value: user.id!.uuidString),
+                        expiration: .init(value: expirationDate)
+                    )
+                    
+                    let token = try req.jwt.sign(payload)
+                    
+                    return UserLoginResponse(token: token, user: user.toPublic())
                 } else {
                     throw LoginError.invalidPassword
                 }
@@ -127,6 +142,13 @@ struct UserController: RouteCollection {
             
             print("UserId: \(userIdParam), NewUsername: \(updateRequest.newUsername)")
             
+            // Verifing the JWT token
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
+            
             return User.find(userIdParam, on: req.db)
                 .unwrap(or: Abort(.notFound, reason: "User not found"))
                 .flatMap { user in
@@ -146,6 +168,12 @@ struct UserController: RouteCollection {
         do {
             let userIdParam = try req.parameters.require("userId", as: UUID.self)
             let updateRequest = try req.content.decode(UpdateEmailRequest.self)
+            
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
 
             return User.find(userIdParam, on: req.db)
                 .unwrap(or: Abort(.notFound, reason: "User not found"))
@@ -166,6 +194,12 @@ struct UserController: RouteCollection {
         do {
             let userIdParam = try req.parameters.require("userId", as: UUID.self)
             let updateRequest = try req.content.decode(UpdateNightscoutRequest.self)
+            
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
 
             return User.find(userIdParam, on: req.db)
                 .unwrap(or: Abort(.notFound, reason: "User not found"))
@@ -186,6 +220,12 @@ struct UserController: RouteCollection {
         do {
             let userIdParam = try req.parameters.require("userId", as: UUID.self)
             let updateRequest = try req.content.decode(UpdateBirthDateRequest.self)
+            
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
 
             return User.find(userIdParam, on: req.db)
                 .unwrap(or: Abort(.notFound, reason: "User not found"))
@@ -206,6 +246,12 @@ struct UserController: RouteCollection {
         do {
             let userIdParam = try req.parameters.require("userId", as: UUID.self)
             let updateRequest = try req.content.decode(UpdateYearOfDiagnosisRequest.self)
+            
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
 
             return User.find(userIdParam, on: req.db)
                 .unwrap(or: Abort(.notFound, reason: "User not found"))
@@ -226,6 +272,12 @@ struct UserController: RouteCollection {
         do {
             let userIdParam = try req.parameters.require("userId", as: UUID.self)
             let updateRequest = try req.content.decode(UpdatePumpModelRequest.self)
+            
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
 
             return User.find(userIdParam, on: req.db)
                 .unwrap(or: Abort(.notFound, reason: "User not found"))
@@ -246,6 +298,12 @@ struct UserController: RouteCollection {
         do {
             let userIdParam = try req.parameters.require("userId", as: UUID.self)
             let updateRequest = try req.content.decode(UpdateSensorModelRequest.self)
+            
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
 
             return User.find(userIdParam, on: req.db)
                 .unwrap(or: Abort(.notFound, reason: "User not found"))
@@ -266,6 +324,12 @@ struct UserController: RouteCollection {
         do {
             let userIdParam = try req.parameters.require("userId", as: UUID.self)
             let updateRequest = try req.content.decode(UpdateInsulinTypeRequest.self)
+            
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
 
             return User.find(userIdParam, on: req.db)
                 .unwrap(or: Abort(.notFound, reason: "User not found"))
@@ -283,6 +347,46 @@ struct UserController: RouteCollection {
     }
 
     
+}
+
+struct TestPayload: JWTPayload {
+    enum CodingKeys: String, CodingKey {
+        case subject = "sub"
+        case expiration = "exp"
+    }
+
+    var subject: SubjectClaim
+
+    var expiration: ExpirationClaim
+
+    func verify(using signer: JWTSigner) throws {
+        try self.expiration.verifyNotExpired()
+    }
+}
+
+struct JWTAuthenticationMiddleware: Middleware {
+    func respond(to request: Request, chainingTo next: Responder) -> EventLoopFuture<Response> {
+        do {
+            // extracting the JWT token from the request's headers
+            guard let token = request.headers.bearerAuthorization?.token else {
+                throw Abort(.unauthorized)
+            }
+
+            // Verifing the JWT token
+            let jwt = try request.jwt.verify(token, as: TestPayload.self)
+
+            return next.respond(to: request)
+
+        } catch {
+            return request.eventLoop.makeFailedFuture(Abort(.unauthorized))
+        }
+    }
+}
+
+
+struct UserLoginResponse: Content {
+    let token: String
+    let user: User.Public
 }
 
 struct UpdateUsernameRequest: Content {

@@ -11,7 +11,11 @@ import Fluent
 
 struct GlucometerBloodSugarTestController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
-        let tests = routes.grouped("users", ":userId", "glucometer-tests")
+        let users = routes.grouped("users")
+
+        let protected = users.grouped(JWTAuthenticationMiddleware())
+            
+        let tests = protected.grouped(":userId", "glucometer-tests")
         tests.post(use: createTest)
         tests.get(use: getAllTests)
         tests.delete(":testId", use: deleteTest)
@@ -21,6 +25,16 @@ struct GlucometerBloodSugarTestController: RouteCollection {
         let userIdParam = try req.parameters.require("userId", as: UUID.self)
         
         let testData: GlucometerBloodSugarTest.Create = try req.content.decode(GlucometerBloodSugarTest.Create.self)
+        
+        do {
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
+        } catch {
+            throw Abort(.unauthorized, reason: "Invalid or missing authentication token")
+        }
         
         return User.find(userIdParam, on: req.db)
             .unwrap(or: Abort(.notFound, reason: "User not found"))
@@ -34,6 +48,16 @@ struct GlucometerBloodSugarTestController: RouteCollection {
     func getAllTests(req: Request) throws -> EventLoopFuture<[GlucometerBloodSugarTest]> {
         let userIdParam = try req.parameters.require("userId", as: UUID.self)
         
+        do {
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
+        } catch {
+            throw Abort(.unauthorized, reason: "Invalid or missing authentication token")
+        }
+        
         return User.find(userIdParam, on: req.db)
             .unwrap(or: Abort(.notFound, reason: "User not found"))
             .flatMap { user in
@@ -46,6 +70,16 @@ struct GlucometerBloodSugarTestController: RouteCollection {
     func deleteTest(req: Request) throws -> EventLoopFuture<HTTPStatus> {
         let userIdParam = try req.parameters.require("userId", as: UUID.self)
         let testIdParam = try req.parameters.require("testId", as: UUID.self)
+        
+        do {
+            let jwtPayload = try req.jwt.verify(as: TestPayload.self)
+            
+            guard jwtPayload.subject.value == userIdParam.uuidString else {
+                throw Abort(.unauthorized)
+            }
+        } catch {
+            throw Abort(.unauthorized, reason: "Invalid or missing authentication token")
+        }
 
         return User.find(userIdParam, on: req.db)
             .unwrap(or: Abort(.notFound, reason: "User not found"))

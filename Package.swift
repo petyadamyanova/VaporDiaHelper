@@ -14,6 +14,7 @@ let package = Package(
         // 🪶 Fluent driver for SQLite.
         .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.0.0"),
         .package(url: "https://github.com/vapor-community/bcrypt.git", from: "1.1.0"),
+        .package(url: "https://github.com/vapor/jwt.git", from: "4.0.0"),
     ],
     targets: [
         .executableTarget(
@@ -23,6 +24,7 @@ let package = Package(
                 .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
                 .product(name: "Vapor", package: "vapor"),
                 .product(name: "BCrypt", package: "bcrypt"),
+                .product(name: "JWT", package: "jwt"),
             ]
         ),
         .testTarget(name: "AppTests", dependencies: [
